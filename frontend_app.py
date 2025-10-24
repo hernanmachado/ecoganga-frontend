@@ -8,7 +8,7 @@ from streamlit_folium import st_folium
 # ==============================
 # CONFIGURACIÓN GENERAL
 # ==============================
-API_URL = os.getenv("API_URL", "http://localhost:8000")
+API_URL = os.getenv("API_URL", "https://hernan556.pythonanywhere.com")
 st.set_page_config(page_title="Ecoganga", page_icon="🌿", layout="wide")
 
 # ==============================
@@ -252,3 +252,4 @@ def crud_promos():
 # ==============================
 if __name__ == "__main__":
     main()
+
