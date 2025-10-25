@@ -40,10 +40,10 @@ def aplicar_estilos():
         border-radius: 10px;
     }
     /* --- SIDEBAR --- */
-    [data-testid="stSidebar"] {
+    [data-testid="stSidebar"] * {
         background-color: #9FBF6E !important;
     }
-    [data.testid="stSidebar"] * {
+    [data-testid="stSidebar"] * {
         color: #1E2D1E !important;
     }
     /* --- TARJETAS DE PROMOS / COMERCIOS --- */
@@ -254,9 +254,9 @@ def crud_comercios():
                          "latitud": lat, "longitud": lon, "telefono": telefono,
                          "email": "", "horario": horario}
                 r = requests.post(f"{API_URL}/comercios/", json=nuevo)
-                if r.status_code == 201:  # Cambiado a 201 Created
+                if r.status_code == 201:
                     st.success("✅ Comercio agregado.")
-                    st.rerun()
+                    st.experimental_rerun()
                 else:
                     st.error(f"Error al guardar: {r.text}")
 
@@ -264,15 +264,57 @@ def crud_comercios():
         st.write("### 📋 Comercios existentes")
         for c in comercios:
             if isinstance(c, dict):
-                st.markdown(f"**{c.get('nombre', 'Sin nombre')}** — {c.get('tipo', '')} ({c.get('direccion', '')})")
-                col1, col2 = st.columns(2)
+                col1, col2, col3 = st.columns([3, 1, 1])
                 with col1:
-                    if st.button(f"🗑️ Eliminar {c.get('id', '')}"):
-                        requests.delete(f"{API_URL}/comercios/{c.get('id', '')}")
-                        st.rerun()
+                    st.markdown(f"**{c.get('nombre', 'Sin nombre')}** — {c.get('tipo', '')} ({c.get('direccion', '')})")
+                
                 with col2:
-                    if st.button(f"✏️ Editar {c.get('id', '')}"):
-                        st.warning("Edición pendiente de implementar.")
+                    if st.button(f"✏️ Editar {c.get('id', '')}", key=f"edit_{c.get('id', '')}"):
+                        st.session_state[f'editar_comercio_{c.get("id")}'] = True
+                
+                with col3:
+                    if st.button(f"🗑️ Eliminar {c.get('id', '')}", key=f"del_{c.get('id', '')}"):
+                        requests.delete(f"{API_URL}/comercios/{c.get('id', '')}")
+                        st.experimental_rerun()
+                
+                # Formulario de edición
+                if st.session_state.get(f'editar_comercio_{c.get("id")}', False):
+                    with st.form(f"form_editar_comercio_{c.get('id')}"):
+                        st.write("#### ✏️ Editar Comercio")
+                        nuevo_nombre = st.text_input("Nombre", value=c.get('nombre', ''))
+                        nuevo_tipo = st.selectbox("Tipo", ["supermercado", "dietetica", "farmacia", "restaurante"], 
+                                                index=["supermercado", "dietetica", "farmacia", "restaurante"].index(c.get('tipo', 'supermercado')))
+                        nueva_direccion = st.text_input("Dirección", value=c.get('direccion', ''))
+                        nueva_lat = st.number_input("Latitud", value=float(c.get('latitud', -34.6037)))
+                        nueva_lon = st.number_input("Longitud", value=float(c.get('longitud', -58.3816)))
+                        nuevo_telefono = st.text_input("Teléfono", value=c.get('telefono', ''))
+                        nuevo_horario = st.text_input("Horario", value=c.get('horario', ''))
+                        
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.form_submit_button("💾 Guardar Cambios"):
+                                datos_actualizados = {
+                                    "nombre": nuevo_nombre,
+                                    "tipo": nuevo_tipo,
+                                    "direccion": nueva_direccion,
+                                    "latitud": nueva_lat,
+                                    "longitud": nueva_lon,
+                                    "telefono": nuevo_telefono,
+                                    "email": c.get('email', ''),
+                                    "horario": nuevo_horario
+                                }
+                                r = requests.put(f"{API_URL}/comercios/{c.get('id')}", json=datos_actualizados)
+                                if r.status_code == 200:
+                                    st.success("✅ Comercio actualizado.")
+                                    st.session_state[f'editar_comercio_{c.get("id")}'] = False
+                                    st.experimental_rerun()
+                                else:
+                                    st.error(f"Error al actualizar: {r.text}")
+                        
+                        with col2:
+                            if st.form_submit_button("❌ Cancelar"):
+                                st.session_state[f'editar_comercio_{c.get("id")}'] = False
+                                st.experimental_rerun()
     else:
         st.info("No hay comercios registrados.")
 
@@ -301,9 +343,9 @@ def crud_promos():
                 promo = {"nombre": nombre, "descripcion": desc, "precio": precio,
                          "categoria": categoria, "comercio_id": comercio_id}
                 r = requests.post(f"{API_URL}/promociones/", json=promo)
-                if r.status_code == 201:  # Cambiado a 201 Created
+                if r.status_code == 201:
                     st.success("✅ Promoción creada.")
-                    st.rerun()
+                    st.experimental_rerun()
                 else:
                     st.error(f"Error al guardar: {r.text}")
 
@@ -311,13 +353,62 @@ def crud_promos():
         st.write("### 📋 Promociones registradas")
         for p in promociones:
             if isinstance(p, dict):
-                st.markdown(f"**{p.get('nombre', 'Sin nombre')}** — ${p.get('precio', '')} ({p.get('categoria', '')})")
-                if st.button(f"🗑️ Eliminar Promo {p.get('id', '')}"):
-                    requests.delete(f"{API_URL}/promociones/{p.get('id', '')}")
-                    st.rerun()
+                # Obtener nombre del comercio
+                comercio_nombre = next((c["nombre"] for c in comercios if c["id"] == p.get('comercio_id')), "Comercio no encontrado")
+                
+                col1, col2, col3 = st.columns([3, 1, 1])
+                with col1:
+                    st.markdown(f"**{p.get('nombre', 'Sin nombre')}** — ${p.get('precio', '')} ({p.get('categoria', '')})")
+                    st.caption(f"📌 {comercio_nombre} | {p.get('descripcion', '')}")
+                
+                with col2:
+                    if st.button(f"✏️ Editar {p.get('id', '')}", key=f"edit_promo_{p.get('id', '')}"):
+                        st.session_state[f'editar_promo_{p.get("id")}'] = True
+                
+                with col3:
+                    if st.button(f"🗑️ Eliminar {p.get('id', '')}", key=f"del_promo_{p.get('id', '')}"):
+                        requests.delete(f"{API_URL}/promociones/{p.get('id', '')}")
+                        st.experimental_rerun()
+                
+                # Formulario de edición
+                if st.session_state.get(f'editar_promo_{p.get("id")}', False):
+                    with st.form(f"form_editar_promo_{p.get('id')}"):
+                        st.write("#### ✏️ Editar Promoción")
+                        nuevo_nombre = st.text_input("Nombre", value=p.get('nombre', ''))
+                        nueva_desc = st.text_area("Descripción", value=p.get('descripcion', ''))
+                        nuevo_precio = st.number_input("Precio", min_value=0.0, step=100.0, value=float(p.get('precio', 0)))
+                        nueva_categoria = st.selectbox("Categoría", ["gluten_free", "vegano", "sin_lactosa", "organico", "bajo_sodio"],
+                                                     index=["gluten_free", "vegano", "sin_lactosa", "organico", "bajo_sodio"].index(p.get('categoria', 'vegano')))
+                        nuevo_comercio_id = st.selectbox("Comercio", [c["id"] for c in comercios if isinstance(c, dict)],
+                                                        index=[c["id"] for c in comercios].index(p.get('comercio_id', 1)) if p.get('comercio_id') in [c["id"] for c in comercios] else 0,
+                                                        format_func=lambda x: next((c["nombre"] for c in comercios if c["id"] == x), str(x)))
+                        
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.form_submit_button("💾 Guardar Cambios"):
+                                datos_actualizados = {
+                                    "nombre": nuevo_nombre,
+                                    "descripcion": nueva_desc,
+                                    "precio": nuevo_precio,
+                                    "categoria": nueva_categoria,
+                                    "comercio_id": nuevo_comercio_id
+                                }
+                                r = requests.put(f"{API_URL}/promociones/{p.get('id')}", json=datos_actualizados)
+                                if r.status_code == 200:
+                                    st.success("✅ Promoción actualizada.")
+                                    st.session_state[f'editar_promo_{p.get("id")}'] = False
+                                    st.experimental_rerun()
+                                else:
+                                    st.error(f"Error al actualizar: {r.text}")
+                        
+                        with col2:
+                            if st.form_submit_button("❌ Cancelar"):
+                                st.session_state[f'editar_promo_{p.get("id")}'] = False
+                                st.experimental_rerun()
     else:
         st.info("No hay promociones cargadas.")
 
 # ==============================
 if __name__ == "__main__":
     main()
+
