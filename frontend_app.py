@@ -43,7 +43,7 @@ def aplicar_estilos():
     [data-testid="stSidebar"] {
         background-color: #9FBF6E !important;
     }
-    [data-testid="stSidebar"] * {
+    [data.testid="stSidebar"] * {
         color: #1E2D1E !important;
     }
     /* --- TARJETAS DE PROMOS / COMERCIOS --- */
@@ -129,19 +129,8 @@ def main():
         st.image(logo_path, width=120)
 
     st.markdown("<h1>🌿 Ecoganga</h1>", unsafe_allow_html=True)
-    st.sidebar.title("🌱 Navegación")
-    pagina = st.sidebar.radio("Ir a:", ["🏠 Inicio", "🛠️ CRUD Comercios", "🎯 CRUD Promos"])
-
-    if pagina == "🏠 Inicio":
-        mostrar_inicio()
-    elif pagina == "🛠️ CRUD Comercios":
-        crud_comercios()
-    else:
-        crud_promos()
-
-    st.markdown("<footer>💚 Grupo 3 – ¡Vamos equipo!</footer>", unsafe_allow_html=True)
-
- # ========== AGREGAR FILTROS EN SIDEBAR ==========
+    
+    # ========== FILTROS EN SIDEBAR ==========
     st.sidebar.title("🌱 Navegación")
     pagina = st.sidebar.radio("Ir a:", ["🏠 Inicio", "🛠️ CRUD Comercios", "🎯 CRUD Promos"])
     
@@ -265,7 +254,7 @@ def crud_comercios():
                          "latitud": lat, "longitud": lon, "telefono": telefono,
                          "email": "", "horario": horario}
                 r = requests.post(f"{API_URL}/comercios/", json=nuevo)
-                if r.status_code == 200:
+                if r.status_code == 201:  # Cambiado a 201 Created
                     st.success("✅ Comercio agregado.")
                     st.rerun()
                 else:
@@ -312,7 +301,7 @@ def crud_promos():
                 promo = {"nombre": nombre, "descripcion": desc, "precio": precio,
                          "categoria": categoria, "comercio_id": comercio_id}
                 r = requests.post(f"{API_URL}/promociones/", json=promo)
-                if r.status_code == 200:
+                if r.status_code == 201:  # Cambiado a 201 Created
                     st.success("✅ Promoción creada.")
                     st.rerun()
                 else:
@@ -332,5 +321,3 @@ def crud_promos():
 # ==============================
 if __name__ == "__main__":
     main()
-
-
