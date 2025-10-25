@@ -3,6 +3,7 @@ import requests
 import pandas as pd
 import os
 import folium
+import time  # 👈 AGREGAR ESTE IMPORT
 from streamlit_folium import st_folium
 
 # ==============================
@@ -162,10 +163,10 @@ def main():
     else:
         crud_promos()
 
-    # REFRESH AUTOMÁTICO - AGREGAR ESTO
+    # REFRESH AUTOMÁTICO - CORREGIDO
     if st.session_state.get('refresh', False):
         st.session_state.refresh = False
-        st.experimental_rerun()
+        st.rerun()  # 👈 CORREGIDO: experimental_rerun() → rerun()
 
     st.markdown("<footer>💚 Grupo 3 – ¡Vamos equipo!</footer>", unsafe_allow_html=True)
 
@@ -236,10 +237,6 @@ def mostrar_inicio(tipo_filtro="Todos", categoria_filtro="Todas"):
 # MÓDULO: CRUD COMERCIOS
 # ==============================
 def crud_comercios():
-    # INICIALIZAR REFRESH
-    if 'refresh' not in st.session_state:
-        st.session_state.refresh = False
-        
     st.subheader("🛠️ Gestión de Comercios")
     comercios = get_comercios()
 
@@ -260,7 +257,8 @@ def crud_comercios():
                 r = requests.post(f"{API_URL}/comercios/", json=nuevo)
                 if r.status_code == 201:
                     st.success("✅ Comercio agregado.")
-                    st.session_state.refresh = True
+                    time.sleep(1)
+                    st.rerun()  # 👈 REFRESH INMEDIATO
                 else:
                     st.error(f"Error al guardar: {r.text}")
 
@@ -279,7 +277,8 @@ def crud_comercios():
                 with col3:
                     if st.button(f"🗑️ Eliminar {c.get('id', '')}", key=f"del_{c.get('id', '')}"):
                         requests.delete(f"{API_URL}/comercios/{c.get('id', '')}")
-                        st.session_state.refresh = True
+                        time.sleep(1)
+                        st.rerun()  # 👈 REFRESH INMEDIATO
                 
                 # Formulario de edición
                 if st.session_state.get(f'editar_comercio_{c.get("id")}', False):
@@ -311,14 +310,15 @@ def crud_comercios():
                                 if r.status_code == 200:
                                     st.success("✅ Comercio actualizado.")
                                     st.session_state[f'editar_comercio_{c.get("id")}'] = False
-                                    st.session_state.refresh = True
+                                    time.sleep(1)
+                                    st.rerun()  # 👈 REFRESH INMEDIATO
                                 else:
                                     st.error(f"Error al actualizar: {r.text}")
                         
                         with col2:
                             if st.form_submit_button("❌ Cancelar"):
                                 st.session_state[f'editar_comercio_{c.get("id")}'] = False
-                                st.session_state.refresh = True
+                                st.rerun()  # 👈 REFRESH INMEDIATO
     else:
         st.info("No hay comercios registrados.")
 
@@ -326,10 +326,6 @@ def crud_comercios():
 # MÓDULO: CRUD PROMOS
 # ==============================
 def crud_promos():
-    # INICIALIZAR REFRESH
-    if 'refresh' not in st.session_state:
-        st.session_state.refresh = False
-        
     st.subheader("🎯 Gestión de Promociones")
     promociones = get_promociones()
     comercios = get_comercios()
@@ -353,7 +349,8 @@ def crud_promos():
                 r = requests.post(f"{API_URL}/promociones/", json=promo)
                 if r.status_code == 201:
                     st.success("✅ Promoción creada.")
-                    st.session_state.refresh = True
+                    time.sleep(1)
+                    st.rerun()  # 👈 REFRESH INMEDIATO
                 else:
                     st.error(f"Error al guardar: {r.text}")
 
@@ -375,7 +372,8 @@ def crud_promos():
                 with col3:
                     if st.button(f"🗑️ Eliminar {p.get('id', '')}", key=f"del_promo_{p.get('id', '')}"):
                         requests.delete(f"{API_URL}/promociones/{p.get('id', '')}")
-                        st.session_state.refresh = True
+                        time.sleep(1)
+                        st.rerun()  # 👈 REFRESH INMEDIATO
                 
                 # Formulario de edición
                 if st.session_state.get(f'editar_promo_{p.get("id")}', False):
@@ -404,18 +402,20 @@ def crud_promos():
                                 if r.status_code == 200:
                                     st.success("✅ Promoción actualizada.")
                                     st.session_state[f'editar_promo_{p.get("id")}'] = False
-                                    st.session_state.refresh = True
+                                    time.sleep(1)
+                                    st.rerun()  # 👈 REFRESH INMEDIATO
                                 else:
                                     st.error(f"Error al actualizar: {r.text}")
                         
                         with col2:
                             if st.form_submit_button("❌ Cancelar"):
                                 st.session_state[f'editar_promo_{p.get("id")}'] = False
-                                st.session_state.refresh = True
+                                st.rerun()  # 👈 REFRESH INMEDIATO
     else:
         st.info("No hay promociones cargadas.")
 
 # ==============================
 if __name__ == "__main__":
     main()
+
 
