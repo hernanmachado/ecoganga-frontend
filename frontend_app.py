@@ -181,9 +181,25 @@ def main():
 # ==============================
 # MÓDULO: INICIO
 # ==============================
-def mostrar_inicio():
+def mostrar_inicio(tipo_filtro="Todos", categoria_filtro="Todas"):
     comercios = get_comercios()
     promociones = get_promociones()
+
+    # Aplicar filtros
+    if tipo_filtro != "Todos" and comercios and isinstance(comercios, list):
+        comercios = [c for c in comercios if c.get('tipo') == tipo_filtro]
+    
+    if categoria_filtro != "Todas" and promociones and isinstance(promociones, list):
+        promociones = [p for p in promociones if p.get('categoria') == categoria_filtro]
+
+    # Mostrar contadores
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("📍 Comercios", len(comercios) if comercios else 0)
+    with col2:
+        st.metric("🎉 Promociones", len(promociones) if promociones else 0)
+    with col3:
+        st.metric("🏪 Tipos", len(set([c.get('tipo') for c in comercios])) if comercios else 0)
 
     # MAPA - con validación adicional
     st.subheader("📍 Mapa de Comercios")
@@ -225,6 +241,7 @@ def mostrar_inicio():
                 """, unsafe_allow_html=True)
     else:
         st.info("No hay promociones registradas.")
+    
 
 # ==============================
 # MÓDULO: CRUD COMERCIOS
@@ -315,4 +332,5 @@ def crud_promos():
 # ==============================
 if __name__ == "__main__":
     main()
+
 
