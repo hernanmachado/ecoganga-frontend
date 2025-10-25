@@ -141,6 +141,43 @@ def main():
 
     st.markdown("<footer>💚 Grupo 3 – ¡Vamos equipo!</footer>", unsafe_allow_html=True)
 
+ # ========== AGREGAR FILTROS EN SIDEBAR ==========
+    st.sidebar.title("🌱 Navegación")
+    pagina = st.sidebar.radio("Ir a:", ["🏠 Inicio", "🛠️ CRUD Comercios", "🎯 CRUD Promos"])
+    
+    # Filtros para el mapa y promociones
+    st.sidebar.title("🔍 Filtros")
+    
+    # Obtener datos para los filtros
+    comercios = get_comercios()
+    promociones = get_promociones()
+    
+    # Filtro por tipo de comercio
+    if comercios and isinstance(comercios, list):
+        tipos_comercio = list(set([c.get('tipo', '') for c in comercios if c.get('tipo')]))
+        tipos_comercio.sort()
+        tipo_seleccionado = st.sidebar.selectbox("Filtrar por tipo de comercio", ["Todos"] + tipos_comercio)
+    else:
+        tipo_seleccionado = "Todos"
+    
+    # Filtro por categoría de promoción
+    if promociones and isinstance(promociones, list):
+        categorias_promo = list(set([p.get('categoria', '') for p in promociones if p.get('categoria')]))
+        categorias_promo.sort()
+        categoria_seleccionada = st.sidebar.selectbox("Filtrar promociones por categoría", ["Todas"] + categorias_promo)
+    else:
+        categoria_seleccionada = "Todas"
+    # ========== FIN FILTROS ==========
+
+    if pagina == "🏠 Inicio":
+        mostrar_inicio(tipo_seleccionado, categoria_seleccionada)  # Pasar filtros
+    elif pagina == "🛠️ CRUD Comercios":
+        crud_comercios()
+    else:
+        crud_promos()
+
+    st.markdown("<footer>💚 Grupo 3 – ¡Vamos equipo!</footer>", unsafe_allow_html=True)
+
 # ==============================
 # MÓDULO: INICIO
 # ==============================
@@ -278,3 +315,4 @@ def crud_promos():
 # ==============================
 if __name__ == "__main__":
     main()
+
