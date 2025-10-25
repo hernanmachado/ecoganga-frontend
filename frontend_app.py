@@ -39,8 +39,8 @@ def aplicar_estilos():
         padding: 1.2rem;
         border-radius: 10px;
     }
-    /* --- SIDEBAR --- */
-    [data-testid="stSidebar"] * {
+    /* --- SIDEBAR CORREGIDO --- */
+    [data-testid="stSidebar"] {
         background-color: #9FBF6E !important;
     }
     [data-testid="stSidebar"] * {
@@ -54,7 +54,7 @@ def aplicar_estilos():
         padding: 1rem;
         margin-bottom: 1rem;
         box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        color: #1E2D1E; /* 👈 texto oscuro visible */
+        color: #1E2D1E;
     }
     .promo-card h4 {
         color: #2E4828;
@@ -75,7 +75,6 @@ def aplicar_estilos():
     </style>
     """, unsafe_allow_html=True)
 
-
 # ==============================
 # FUNCIONES API
 # ==============================
@@ -84,7 +83,6 @@ def get_comercios():
         r = requests.get(f"{API_URL}/comercios/")
         if r.status_code == 200:
             data = r.json()
-            # Verificar que sea una lista
             if isinstance(data, list):
                 return data
             else:
@@ -102,7 +100,6 @@ def get_promociones():
         r = requests.get(f"{API_URL}/promociones/")
         if r.status_code == 200:
             data = r.json()
-            # Verificar que sea una lista
             if isinstance(data, list):
                 return data
             else:
@@ -159,11 +156,16 @@ def main():
     # ========== FIN FILTROS ==========
 
     if pagina == "🏠 Inicio":
-        mostrar_inicio(tipo_seleccionado, categoria_seleccionada)  # Pasar filtros
+        mostrar_inicio(tipo_seleccionado, categoria_seleccionada)
     elif pagina == "🛠️ CRUD Comercios":
         crud_comercios()
     else:
         crud_promos()
+
+    # REFRESH AUTOMÁTICO - AGREGAR ESTO
+    if st.session_state.get('refresh', False):
+        st.session_state.refresh = False
+        st.experimental_rerun()
 
     st.markdown("<footer>💚 Grupo 3 – ¡Vamos equipo!</footer>", unsafe_allow_html=True)
 
@@ -190,10 +192,9 @@ def mostrar_inicio(tipo_filtro="Todos", categoria_filtro="Todas"):
     with col3:
         st.metric("🏪 Tipos", len(set([c.get('tipo') for c in comercios])) if comercios else 0)
 
-    # MAPA - con validación adicional
+    # MAPA
     st.subheader("📍 Mapa de Comercios")
     if comercios and isinstance(comercios, list) and len(comercios) > 0:
-        # Validar que los comercios tengan los campos necesarios
         comercios_validos = [c for c in comercios if isinstance(c, dict) and 'latitud' in c and 'longitud' in c]
         
         if comercios_validos:
@@ -230,12 +231,15 @@ def mostrar_inicio(tipo_filtro="Todos", categoria_filtro="Todas"):
                 """, unsafe_allow_html=True)
     else:
         st.info("No hay promociones registradas.")
-    
 
 # ==============================
 # MÓDULO: CRUD COMERCIOS
 # ==============================
 def crud_comercios():
+    # INICIALIZAR REFRESH
+    if 'refresh' not in st.session_state:
+        st.session_state.refresh = False
+        
     st.subheader("🛠️ Gestión de Comercios")
     comercios = get_comercios()
 
@@ -256,7 +260,7 @@ def crud_comercios():
                 r = requests.post(f"{API_URL}/comercios/", json=nuevo)
                 if r.status_code == 201:
                     st.success("✅ Comercio agregado.")
-                    st.experimental_rerun()
+                    st.session_state.refresh = True
                 else:
                     st.error(f"Error al guardar: {r.text}")
 
@@ -275,7 +279,7 @@ def crud_comercios():
                 with col3:
                     if st.button(f"🗑️ Eliminar {c.get('id', '')}", key=f"del_{c.get('id', '')}"):
                         requests.delete(f"{API_URL}/comercios/{c.get('id', '')}")
-                        st.experimental_rerun()
+                        st.session_state.refresh = True
                 
                 # Formulario de edición
                 if st.session_state.get(f'editar_comercio_{c.get("id")}', False):
@@ -307,14 +311,14 @@ def crud_comercios():
                                 if r.status_code == 200:
                                     st.success("✅ Comercio actualizado.")
                                     st.session_state[f'editar_comercio_{c.get("id")}'] = False
-                                    st.experimental_rerun()
+                                    st.session_state.refresh = True
                                 else:
                                     st.error(f"Error al actualizar: {r.text}")
                         
                         with col2:
                             if st.form_submit_button("❌ Cancelar"):
                                 st.session_state[f'editar_comercio_{c.get("id")}'] = False
-                                st.experimental_rerun()
+                                st.session_state.refresh = True
     else:
         st.info("No hay comercios registrados.")
 
@@ -322,6 +326,10 @@ def crud_comercios():
 # MÓDULO: CRUD PROMOS
 # ==============================
 def crud_promos():
+    # INICIALIZAR REFRESH
+    if 'refresh' not in st.session_state:
+        st.session_state.refresh = False
+        
     st.subheader("🎯 Gestión de Promociones")
     promociones = get_promociones()
     comercios = get_comercios()
@@ -345,7 +353,7 @@ def crud_promos():
                 r = requests.post(f"{API_URL}/promociones/", json=promo)
                 if r.status_code == 201:
                     st.success("✅ Promoción creada.")
-                    st.experimental_rerun()
+                    st.session_state.refresh = True
                 else:
                     st.error(f"Error al guardar: {r.text}")
 
@@ -353,7 +361,6 @@ def crud_promos():
         st.write("### 📋 Promociones registradas")
         for p in promociones:
             if isinstance(p, dict):
-                # Obtener nombre del comercio
                 comercio_nombre = next((c["nombre"] for c in comercios if c["id"] == p.get('comercio_id')), "Comercio no encontrado")
                 
                 col1, col2, col3 = st.columns([3, 1, 1])
@@ -368,7 +375,7 @@ def crud_promos():
                 with col3:
                     if st.button(f"🗑️ Eliminar {p.get('id', '')}", key=f"del_promo_{p.get('id', '')}"):
                         requests.delete(f"{API_URL}/promociones/{p.get('id', '')}")
-                        st.experimental_rerun()
+                        st.session_state.refresh = True
                 
                 # Formulario de edición
                 if st.session_state.get(f'editar_promo_{p.get("id")}', False):
@@ -397,14 +404,14 @@ def crud_promos():
                                 if r.status_code == 200:
                                     st.success("✅ Promoción actualizada.")
                                     st.session_state[f'editar_promo_{p.get("id")}'] = False
-                                    st.experimental_rerun()
+                                    st.session_state.refresh = True
                                 else:
                                     st.error(f"Error al actualizar: {r.text}")
                         
                         with col2:
                             if st.form_submit_button("❌ Cancelar"):
                                 st.session_state[f'editar_promo_{p.get("id")}'] = False
-                                st.experimental_rerun()
+                                st.session_state.refresh = True
     else:
         st.info("No hay promociones cargadas.")
 
