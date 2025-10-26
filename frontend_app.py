@@ -3,14 +3,20 @@ import requests
 import pandas as pd
 import os
 import folium
-import time  # 👈 AGREGAR ESTE IMPORT
+import time
 from streamlit_folium import st_folium
 
 # ==============================
-# CONFIGURACIÓN GENERAL
+# CONFIGURACIÓN Y SEGURIDAD
 # ==============================
 API_URL = os.getenv("API_URL", "https://hernan556.pythonanywhere.com")
 st.set_page_config(page_title="Ecoganga", page_icon="🌿", layout="wide")
+
+# USUARIOS AUTORIZADOS PARA EL TP
+USUARIOS_AUTORIZADOS = {
+    "hernan": "231Ran@#",           # ← TU USUARIO PERSONAL
+    "grupo3ppi": "pipistrello7"     # ← USUARIO DEL GRUPO
+}
 
 # ==============================
 # ESTILOS VISUALES
@@ -40,14 +46,12 @@ def aplicar_estilos():
         padding: 1.2rem;
         border-radius: 10px;
     }
-    /* --- SIDEBAR CORREGIDO --- */
     [data-testid="stSidebar"] {
         background-color: #9FBF6E !important;
     }
     [data-testid="stSidebar"] * {
         color: #1E2D1E !important;
     }
-    /* --- TARJETAS DE PROMOS / COMERCIOS --- */
     .promo-card {
         background-color: #ffffff;
         border: 1.5px solid #9FBF6E;
@@ -75,6 +79,91 @@ def aplicar_estilos():
     }
     </style>
     """, unsafe_allow_html=True)
+
+# ==============================
+# SISTEMA DE AUTENTICACIÓN
+# ==============================
+def mostrar_login():
+    """Pantalla de login para administradores"""
+    st.sidebar.title("🔐 Acceso Administrativo")
+    st.sidebar.info("Ingresa tus credenciales para gestionar comercios y promociones")
+    
+    with st.sidebar.form("login_form"):
+        usuario = st.text_input("👤 Usuario")
+        password = st.text_input("🔒 Contraseña", type="password")
+        submit = st.form_submit_button("🚀 Ingresar")
+        
+        if submit:
+            if usuario in USUARIOS_AUTORIZADOS and USUARIOS_AUTORIZADOS[usuario] == password:
+                st.session_state.logged_in = True
+                st.session_state.usuario_actual = usuario
+                st.success("✅ ¡Acceso concedido!")
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.error("❌ Usuario o contraseña incorrectos")
+    
+    # Mostrar información pública aunque no esté logueado
+    st.sidebar.markdown("---")
+    st.sidebar.info("🌿 **Ecoganga** - Encuentra comercios y promociones saludables")
+
+def mostrar_app_completa():
+    """App completa con todas las funciones para administradores"""
+    usuario = st.session_state.get('usuario_actual', 'Administrador')
+    
+    # Header con info de usuario
+    st.sidebar.title(f"👋 Hola, {usuario}")
+    st.sidebar.success("🔧 **Modo Administrador Activado**")
+    
+    # Botón de logout
+    if st.sidebar.button("🚪 Cerrar sesión"):
+        st.session_state.logged_in = False
+        st.session_state.usuario_actual = None
+        st.rerun()
+    
+    st.sidebar.markdown("---")
+    
+    # Navegación completa
+    st.sidebar.title("🌱 Navegación")
+    pagina = st.sidebar.radio("Ir a:", ["🏠 Inicio", "🛠️ CRUD Comercios", "🎯 CRUD Promos"])
+    
+    # Filtros (solo en inicio)
+    if pagina == "🏠 Inicio":
+        st.sidebar.title("🔍 Filtros")
+        comercios = get_comercios()
+        promociones = get_promociones()
+        
+        if comercios and isinstance(comercios, list):
+            tipos_comercio = list(set([c.get('tipo', '') for c in comercios if c.get('tipo')]))
+            tipos_comercio.sort()
+            tipo_seleccionado = st.sidebar.selectbox("Filtrar por tipo de comercio", ["Todos"] + tipos_comercio)
+        else:
+            tipo_seleccionado = "Todos"
+        
+        if promociones and isinstance(promociones, list):
+            categorias_promo = list(set([p.get('categoria', '') for p in promociones if p.get('categoria')]))
+            categorias_promo.sort()
+            categoria_seleccionada = st.sidebar.selectbox("Filtrar promociones por categoría", ["Todas"] + categorias_promo)
+        else:
+            categoria_seleccionada = "Todas"
+    else:
+        tipo_seleccionado = "Todos"
+        categoria_seleccionada = "Todas"
+
+    # Contenido según página
+    if pagina == "🏠 Inicio":
+        mostrar_inicio(tipo_seleccionado, categoria_seleccionada)
+    elif pagina == "🛠️ CRUD Comercios":
+        crud_comercios()
+    else:
+        crud_promos()
+
+    # Refresh automático
+    if st.session_state.get('refresh', False):
+        st.session_state.refresh = False
+        st.rerun()
+
+    st.markdown("<footer>💚 Grupo 3 – ¡Vamos equipo!</footer>", unsafe_allow_html=True)
 
 # ==============================
 # FUNCIONES API
@@ -119,6 +208,10 @@ def get_promociones():
 def main():
     aplicar_estilos()
 
+    # Inicializar estado de login
+    if 'logged_in' not in st.session_state:
+        st.session_state.logged_in = False
+
     # LOGO
     logo_path = os.path.join("static", "ecoganga_logo.jpg")
     if not os.path.exists(logo_path):
@@ -127,51 +220,23 @@ def main():
         st.image(logo_path, width=120)
 
     st.markdown("<h1>🌿 Ecoganga</h1>", unsafe_allow_html=True)
-    
-    # ========== FILTROS EN SIDEBAR ==========
-    st.sidebar.title("🌱 Navegación")
-    pagina = st.sidebar.radio("Ir a:", ["🏠 Inicio", "🛠️ CRUD Comercios", "🎯 CRUD Promos"])
-    
-    # Filtros para el mapa y promociones
-    st.sidebar.title("🔍 Filtros")
-    
-    # Obtener datos para los filtros
-    comercios = get_comercios()
-    promociones = get_promociones()
-    
-    # Filtro por tipo de comercio
-    if comercios and isinstance(comercios, list):
-        tipos_comercio = list(set([c.get('tipo', '') for c in comercios if c.get('tipo')]))
-        tipos_comercio.sort()
-        tipo_seleccionado = st.sidebar.selectbox("Filtrar por tipo de comercio", ["Todos"] + tipos_comercio)
-    else:
-        tipo_seleccionado = "Todos"
-    
-    # Filtro por categoría de promoción
-    if promociones and isinstance(promociones, list):
-        categorias_promo = list(set([p.get('categoria', '') for p in promociones if p.get('categoria')]))
-        categorias_promo.sort()
-        categoria_seleccionada = st.sidebar.selectbox("Filtrar promociones por categoría", ["Todas"] + categorias_promo)
-    else:
-        categoria_seleccionada = "Todas"
-    # ========== FIN FILTROS ==========
 
-    if pagina == "🏠 Inicio":
-        mostrar_inicio(tipo_seleccionado, categoria_seleccionada)
-    elif pagina == "🛠️ CRUD Comercios":
-        crud_comercios()
-    else:
-        crud_promos()
-
-    # REFRESH AUTOMÁTICO - CORREGIDO
-    if st.session_state.get('refresh', False):
-        st.session_state.refresh = False
-        st.rerun()  # 👈 CORREGIDO: experimental_rerun() → rerun()
-
-    st.markdown("<footer>💚 Grupo 3 – ¡Vamos equipo!</footer>", unsafe_allow_html=True)
+    # Verificar autenticación
+    if not st.session_state.logged_in:
+        # MODO PÚBLICO - Solo mostrar inicio
+        st.sidebar.title("🌱 Navegación")
+        st.sidebar.info("📍 Explora comercios y promociones cerca de ti")
+        mostrar_inicio()
+        
+        # Mostrar login en sidebar para administradores
+        mostrar_login()
+        return
+    
+    # MODO ADMINISTRADOR - App completa
+    mostrar_app_completa()
 
 # ==============================
-# MÓDULO: INICIO
+# MÓDULOS EXISTENTES (TUS FUNCIONES ORIGINALES)
 # ==============================
 def mostrar_inicio(tipo_filtro="Todos", categoria_filtro="Todas"):
     comercios = get_comercios()
@@ -233,9 +298,6 @@ def mostrar_inicio(tipo_filtro="Todos", categoria_filtro="Todas"):
     else:
         st.info("No hay promociones registradas.")
 
-# ==============================
-# MÓDULO: CRUD COMERCIOS
-# ==============================
 def crud_comercios():
     st.subheader("🛠️ Gestión de Comercios")
     comercios = get_comercios()
@@ -258,7 +320,7 @@ def crud_comercios():
                 if r.status_code == 201:
                     st.success("✅ Comercio agregado.")
                     time.sleep(1)
-                    st.rerun()  # 👈 REFRESH INMEDIATO
+                    st.rerun()
                 else:
                     st.error(f"Error al guardar: {r.text}")
 
@@ -278,7 +340,7 @@ def crud_comercios():
                     if st.button(f"🗑️ Eliminar {c.get('id', '')}", key=f"del_{c.get('id', '')}"):
                         requests.delete(f"{API_URL}/comercios/{c.get('id', '')}")
                         time.sleep(1)
-                        st.rerun()  # 👈 REFRESH INMEDIATO
+                        st.rerun()
                 
                 # Formulario de edición
                 if st.session_state.get(f'editar_comercio_{c.get("id")}', False):
@@ -311,20 +373,17 @@ def crud_comercios():
                                     st.success("✅ Comercio actualizado.")
                                     st.session_state[f'editar_comercio_{c.get("id")}'] = False
                                     time.sleep(1)
-                                    st.rerun()  # 👈 REFRESH INMEDIATO
+                                    st.rerun()
                                 else:
                                     st.error(f"Error al actualizar: {r.text}")
                         
                         with col2:
                             if st.form_submit_button("❌ Cancelar"):
                                 st.session_state[f'editar_comercio_{c.get("id")}'] = False
-                                st.rerun()  # 👈 REFRESH INMEDIATO
+                                st.rerun()
     else:
         st.info("No hay comercios registrados.")
 
-# ==============================
-# MÓDULO: CRUD PROMOS
-# ==============================
 def crud_promos():
     st.subheader("🎯 Gestión de Promociones")
     promociones = get_promociones()
@@ -350,7 +409,7 @@ def crud_promos():
                 if r.status_code == 201:
                     st.success("✅ Promoción creada.")
                     time.sleep(1)
-                    st.rerun()  # 👈 REFRESH INMEDIATO
+                    st.rerun()
                 else:
                     st.error(f"Error al guardar: {r.text}")
 
@@ -373,7 +432,7 @@ def crud_promos():
                     if st.button(f"🗑️ Eliminar {p.get('id', '')}", key=f"del_promo_{p.get('id', '')}"):
                         requests.delete(f"{API_URL}/promociones/{p.get('id', '')}")
                         time.sleep(1)
-                        st.rerun()  # 👈 REFRESH INMEDIATO
+                        st.rerun()
                 
                 # Formulario de edición
                 if st.session_state.get(f'editar_promo_{p.get("id")}', False):
@@ -403,19 +462,19 @@ def crud_promos():
                                     st.success("✅ Promoción actualizada.")
                                     st.session_state[f'editar_promo_{p.get("id")}'] = False
                                     time.sleep(1)
-                                    st.rerun()  # 👈 REFRESH INMEDIATO
+                                    st.rerun()
                                 else:
                                     st.error(f"Error al actualizar: {r.text}")
                         
                         with col2:
                             if st.form_submit_button("❌ Cancelar"):
                                 st.session_state[f'editar_promo_{p.get("id")}'] = False
-                                st.rerun()  # 👈 REFRESH INMEDIATO
+                                st.rerun()
     else:
         st.info("No hay promociones cargadas.")
 
-# ==============================
 if __name__ == "__main__":
     main()
+      
 
 
