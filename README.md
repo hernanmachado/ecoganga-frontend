@@ -1,2 +1,2 @@
-# ecoganga-frontend
-frontend para uso educativo
+# https://ecoganga-frontend.onrender.com/
+frontend para uso educativo. Para la materia PPI se pretendió realizar un MVP que exlplique como una etapa del proceso de metodologias dinamicas de trabajo scrum. El frontend es deployado en Render (en su versión free) y el backend en pythonanywere.com. Agradezco esta grata experiencia a mis compañeros de equipo que hicieron agradable la cursada del cuatrimestre para esta materia.  
