@@ -14,8 +14,8 @@ st.set_page_config(page_title="Ecoganga", page_icon="🌿", layout="wide")
 
 # USUARIOS AUTORIZADOS PARA EL TP
 USUARIOS_AUTORIZADOS = {
-    "hernan": "231Ran@#",           # ← TU USUARIO PERSONAL
-    "grupo3ppi": "pipistrello7"     # ← USUARIO DEL GRUPO
+    "hernan": "231Ran@#",           
+    "grupo3ppi": "pipistrello7"     
 }
 
 # ==============================
@@ -67,6 +67,13 @@ def aplicar_estilos():
     }
     .promo-card p {
         color: #1E2D1E;
+    }
+    .comercio-info {
+        background-color: #F0F7E6;
+        padding: 0.5rem;
+        border-radius: 8px;
+        margin-top: 0.5rem;
+        border-left: 4px solid #9FBF6E;
     }
     footer {
         margin-top: 2rem;
@@ -202,6 +209,13 @@ def get_promociones():
         st.error(f"❌ Error al conectar con backend: {e}")
         return []
 
+def obtener_comercio_por_id(comercio_id, comercios):
+    """Busca un comercio por su ID en la lista de comercios"""
+    for comercio in comercios:
+        if isinstance(comercio, dict) and comercio.get('id') == comercio_id:
+            return comercio
+    return None
+
 # ==============================
 # INTERFAZ PRINCIPAL
 # ==============================
@@ -287,12 +301,22 @@ def mostrar_inicio(tipo_filtro="Todos", categoria_filtro="Todas"):
         cols = st.columns(2)
         for i, p in enumerate(promociones):
             with cols[i % 2]:
+                # Obtener información del comercio asociado
+                comercio_info = "📍 Información no disponible"
+                if comercios and isinstance(comercios, list):
+                    comercio_asociado = obtener_comercio_por_id(p.get('comercio_id'), comercios)
+                    if comercio_asociado:
+                        comercio_info = f"🏪 **{comercio_asociado.get('nombre', 'Sin nombre')}**\n\n📍 {comercio_asociado.get('direccion', 'Dirección no disponible')}"
+                
                 st.markdown(f"""
                 <div class='promo-card'>
                     <h4>{p.get('nombre', 'Sin nombre')}</h4>
                     <p><b>💰 Precio:</b> ${p.get('precio', 'N/A')}</p>
                     <p><b>🏷️ Categoría:</b> {p.get('categoria', 'N/A').replace('_',' ').title()}</p>
                     <p>{p.get('descripcion', '')}</p>
+                    <div class='comercio-info'>
+                        {comercio_info}
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
     else:
@@ -418,11 +442,13 @@ def crud_promos():
         for p in promociones:
             if isinstance(p, dict):
                 comercio_nombre = next((c["nombre"] for c in comercios if c["id"] == p.get('comercio_id')), "Comercio no encontrado")
+                comercio_direccion = next((c["direccion"] for c in comercios if c["id"] == p.get('comercio_id')), "Dirección no disponible")
                 
                 col1, col2, col3 = st.columns([3, 1, 1])
                 with col1:
                     st.markdown(f"**{p.get('nombre', 'Sin nombre')}** — ${p.get('precio', '')} ({p.get('categoria', '')})")
                     st.caption(f"📌 {comercio_nombre} | {p.get('descripcion', '')}")
+                    st.caption(f"📍 {comercio_direccion}")
                 
                 with col2:
                     if st.button(f"✏️ Editar {p.get('id', '')}", key=f"edit_promo_{p.get('id', '')}"):
@@ -475,6 +501,4 @@ def crud_promos():
 
 if __name__ == "__main__":
     main()
-      
-
 
