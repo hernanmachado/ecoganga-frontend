@@ -12,11 +12,34 @@ from streamlit_folium import st_folium
 API_URL = os.getenv("API_URL", "https://hernan556.pythonanywhere.com")
 st.set_page_config(page_title="Ecoganga", page_icon="🌿", layout="wide")
 
-# USUARIOS AUTORIZADOS PARA EL TP
-USUARIOS_AUTORIZADOS = {
-    "hernan": "231Ran@#",           
-    "grupo3ppi": "pipistrello7"     
-}
+def cargar_usuarios_autorizados():
+    """se cargaron los usuarios autorizados"""
+    usuarios = {}
+    usuarios_str = os.getenv("USUARIOS_AUTORIZADOS", "")
+    
+    if usuarios_str:
+        try:
+            # Formato: "usuario1:contraseña1,usuario2:contraseña2"
+            pares = usuarios_str.split(",")
+            for par in pares:
+                if ":" in par:
+                    usuario, password = par.split(":", 1)
+                    usuarios[usuario.strip()] = password.strip()
+            
+            st.success(f"✅ {len(usuarios)} usuario(s) cargado(s) desde variables de entorno")
+            
+        except Exception as e:
+            st.error(f"❌ Error cargando usuarios: {e}")
+            # Fallback seguro
+            usuarios = {"admin": "admin123"}
+    else:
+        # Si no hay variable de entorno, mostrar error claro
+        st.error("🚨 ERROR: Variable USUARIOS_AUTORIZADOS no configurada")
+        usuarios = {}  # No permitir login hasta que se configure
+    
+    return usuarios
+
+USUARIOS_AUTORIZADOS = cargar_usuarios_autorizados()
 
 # ==============================
 # ESTILOS VISUALES
@@ -501,4 +524,5 @@ def crud_promos():
 
 if __name__ == "__main__":
     main()
+
 
